@@ -107,20 +107,31 @@ export default function RapidMap() {
   const activeIncidents = incidents.filter(i => ['reported', 'dispatched', 'active', 'resolved'].includes(i.status));
 
   return (
-    <section className="col-span-6 relative border-r border-border flex flex-col min-h-0 z-10">
-      <div className="absolute top-4 right-4 z-20 bg-surface border border-border p-2.5 rounded-xl text-[10px] font-mono text-muted space-y-1.5 select-none max-w-[160px]">
-        <span className="text-[9px] text-accent font-bold uppercase block tracking-wider mb-1">Map Overlays</span>
-        {[
-          [showPoliceStations, setShowPoliceStations, 'Police Stations'],
-          [showNoFlyZones, setShowNoFlyZones, 'No-Fly Zones'],
-          [showCoverageRadius, setShowCoverageRadius, 'RAPID Bases']
-        ].map(([val, setter, label]) => (
-          <label key={label} className="flex items-center gap-1.5 cursor-pointer hover:text-text">
-            <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)} className="accent-[var(--color-accent)]" />
-            {label}
-          </label>
-        ))}
-      </div>
+    <section className="order-1 lg:order-none lg:col-span-6 relative lg:border-r border-border flex flex-col min-h-[420px] lg:min-h-0 z-10">
+      {API_KEY && (
+        <div className="absolute top-4 right-4 z-20 bg-surface border border-border p-2 rounded-xl text-[11px] font-mono text-muted select-none max-w-[180px]">
+          <span className="text-[10px] text-muted font-bold uppercase block tracking-wider mb-1 px-1">Show on map</span>
+          {[
+            [showPoliceStations, setShowPoliceStations, 'Police stations'],
+            [showNoFlyZones, setShowNoFlyZones, 'No-fly zones'],
+            [showCoverageRadius, setShowCoverageRadius, 'Drone bases']
+          ].map(([val, setter, label]) => (
+            // The label is the target, so it carries the 44px, not the box.
+            <label
+              key={label}
+              className="flex items-center gap-2 min-h-[44px] px-1 cursor-pointer hover:text-text rounded-lg focus-within:outline focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-accent"
+            >
+              <input
+                type="checkbox"
+                checked={val}
+                onChange={e => setter(e.target.checked)}
+                className="h-4 w-4 flex-shrink-0 accent-[var(--color-accent)]"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      )}
 
       <div className="flex-1 w-full h-full relative z-10">
         {!API_KEY ? (

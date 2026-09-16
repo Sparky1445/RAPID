@@ -1,41 +1,65 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import useRapidStore from '../../store/rapidStore';
+
+const BTN = 'min-h-[44px] px-3 rounded-xl text-xs font-bold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
 export default function OverrideModal() {
   const overrideModal = useRapidStore(s => s.overrideModal);
   const setOverrideModal = useRapidStore(s => s.setOverrideModal);
   const handleManualDispatch = useRapidStore(s => s.handleManualDispatch);
 
+  useEffect(() => {
+    if (!overrideModal) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setOverrideModal(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [overrideModal, setOverrideModal]);
+
+  if (!overrideModal) return null;
+
   return (
-    <AnimatePresence>
-      {overrideModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-sm bg-[#161F30] border border-red-500/30 rounded-3xl p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="h-6 w-6 text-red-400" />
-              <h3 className="font-bold text-sm uppercase tracking-wider text-red-400">Insufficient Energy — Override Required</h3>
-            </div>
-            <p className="text-[11px] font-mono text-gray-300 mb-2">
-              <span className="text-white font-bold">{overrideModal.candidate.callSign}</span> does not have enough battery to reach this incident and return to base.
-            </p>
-            <p className="text-[10px] font-mono text-red-400 mb-4">
-              Dispatching this drone risks it running out of power before it can return. Use only if no other drone is available.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setOverrideModal(null)} className="py-2.5 bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-xl text-xs font-bold text-gray-300 transition-all">Cancel</button>
-              <button
-                onClick={() => handleManualDispatch(overrideModal.candidate, overrideModal.incident, true)}
-                className="py-2.5 bg-red-700 hover:bg-red-600 rounded-xl text-xs font-bold text-white transition-all"
-              >
-                Dispatch anyway
-              </button>
-            </div>
-          </motion.div>
+    <div
+      className="fixed inset-0 bg-text/60 z-50 flex items-center justify-center p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) setOverrideModal(null); }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="override-title"
+        aria-describedby="override-body"
+        className="view-enter w-full max-w-sm bg-surface border border-status-critical rounded-3xl p-6 shadow-sm"
+      >
+        <div className="flex items-start gap-3 mb-4">
+          <AlertTriangle className="h-6 w-6 text-status-critical flex-shrink-0" aria-hidden="true" />
+          <h3 id="override-title" className="font-bold text-sm uppercase tracking-wider text-status-critical">
+            Not enough battery
+          </h3>
         </div>
-      )}
-    </AnimatePresence>
+        <div id="override-body">
+          <p className="text-[11px] font-mono text-text mb-2 leading-relaxed">
+            <span className="font-bold">{overrideModal.candidate.callSign}</span> cannot reach this incident and still make it back to base.
+          </p>
+          <p className="text-[11px] font-mono text-muted mb-4 leading-relaxed">
+            Sending it anyway risks losing power mid-flight. Do this only if no other drone can go.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setOverrideModal(null)}
+            autoFocus
+            className={`${BTN} bg-page border border-border-strong text-text hover:bg-border`}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => handleManualDispatch(overrideModal.candidate, overrideModal.incident, true)}
+            className={`${BTN} bg-status-critical text-on-solid hover:opacity-90`}
+          >
+            Send anyway
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
