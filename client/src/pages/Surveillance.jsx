@@ -4,19 +4,26 @@ import { SkeletonCard } from '../components/shared/Skeleton';
 
 const PATTERNS = ['circular', 'linear', 'grid', 'random'];
 
-const RESTRICTION_STYLE = {
-  absolute: 'text-red-400 border-red-500/30 bg-red-500/10',
-  conditional: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
-  advisory: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10'
+// A badge tone plus whether it is filled. Filled reads heavier than
+// outline, so "absolute" and "aborted" stand apart from the rest without
+// depending on anyone reading red correctly (DIRECTION.md section 3).
+const RESTRICTION_BADGE = {
+  absolute: 'status-badge--critical status-badge--filled',
+  conditional: 'status-badge--urgent status-badge--outline',
+  advisory: 'status-badge--warning status-badge--outline'
 };
 
-const MISSION_STATUS_STYLE = {
-  active: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-  paused: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
-  planned: 'text-gray-400 border-gray-600/30 bg-gray-500/10',
-  aborted: 'text-red-400 border-red-500/30 bg-red-500/10',
-  complete: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
+const MISSION_BADGE = {
+  active: 'status-badge--normal status-badge--outline',
+  paused: 'status-badge--warning status-badge--outline',
+  planned: 'border-border text-muted',
+  aborted: 'status-badge--critical status-badge--filled',
+  complete: 'border-border-strong text-text'
 };
+
+const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+const SELECT = `w-full min-h-[44px] bg-page text-text border border-border-strong rounded-xl px-3 py-2 text-xs outline-none transition-colors duration-150 focus:border-accent focus:ring-2 focus:ring-accent`;
+const MISSION_BTN = `flex-1 min-h-[44px] px-2 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-1.5 transition-colors duration-150 ${FOCUS}`;
 
 function Surveillance() {
   const [states, setStates] = useState([]);
@@ -126,23 +133,24 @@ function Surveillance() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-[#1F2E45] pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/20">
-            <Radar className="h-6 w-6 text-cyan-400" />
+          <div className="bg-accent/10 p-2.5 rounded-xl border border-accent/30">
+            <Radar className="h-6 w-6 text-accent" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-wide text-white">Border & Protected-Zone Surveillance</h2>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">Airspace zones, patrol missions, and autonomous anomaly alerts.</p>
+            <h2 className="text-xl font-bold tracking-wide text-text">Patrols and protected airspace</h2>
+            <p className="text-xs text-muted font-mono mt-0.5">Restricted zones, patrols in progress, and who is flying them.</p>
           </div>
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5" role="group" aria-label="Region">
           {states.map(s => (
             <button
               key={s.id}
               onClick={() => setActiveState(s.code)}
-              className={`text-[10px] font-mono font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all ${
-                activeState === s.code ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400' : 'bg-slate-900/40 border-slate-800 text-gray-500 hover:text-gray-300'
+              aria-pressed={activeState === s.code}
+              className={`min-h-[44px] text-[10px] font-mono font-bold uppercase tracking-wider px-3 rounded-lg border transition-colors duration-150 ${FOCUS} ${
+                activeState === s.code ? 'bg-accent border-accent text-on-solid' : 'bg-surface border-border-strong text-muted hover:text-text'
               }`}
             >
               {s.name}
@@ -152,49 +160,58 @@ function Surveillance() {
       </div>
 
       {feedback && (
-        <div className={`p-3 rounded-xl text-xs font-mono font-bold ${feedback.type === 'ok' ? 'bg-emerald-900/30 border border-emerald-500/30 text-emerald-400' : 'bg-red-900/30 border border-red-500/30 text-red-400'}`}>
+        <div role="status" className={`p-3 rounded-xl text-xs font-mono font-bold border ${feedback.type === 'ok' ? 'bg-status-normal/10 border-status-normal/40 text-status-normal' : 'bg-status-critical/10 border-status-critical/40 text-status-critical'}`}>
           {feedback.msg}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Airspace Zones */}
         <div className="bg-surface rounded-2xl p-5 border border-border">
           <div className="flex items-center gap-2 mb-4">
-            <ShieldAlert className="h-4 w-4 text-cyan-400" />
-            <h3 className="font-bold text-sm text-white uppercase tracking-wider">Airspace Zones</h3>
+            <ShieldAlert className="h-4 w-4 text-muted" aria-hidden="true" />
+            <h3 className="font-bold text-sm text-text uppercase tracking-wider">Protected zones</h3>
           </div>
           <div className="space-y-2">
             {zones.map(z => (
-              <div key={z.id} className="p-3 rounded-xl border border-slate-800 bg-slate-900/30 flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-white">{z.name}</div>
-                  <div className="text-[9px] text-gray-500 font-mono uppercase">{z.type.replace(/_/g, ' ')}</div>
+              <div key={z.id} className="p-3 rounded-xl border border-border bg-page flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-text truncate">{z.name}</div>
+                  <div className="text-[10px] text-muted font-mono uppercase">{z.type.replace(/_/g, ' ')}</div>
                 </div>
-                <span className={`text-[9px] font-mono font-bold uppercase px-2 py-1 rounded-full border ${RESTRICTION_STYLE[z.restriction_level] || RESTRICTION_STYLE.advisory}`}>
+                <span className={`status-badge font-mono uppercase flex-shrink-0 ${RESTRICTION_BADGE[z.restriction_level] || RESTRICTION_BADGE.advisory}`}>
                   {z.restriction_level}
                 </span>
               </div>
             ))}
-            {zones.length === 0 && <p className="text-xs text-gray-600 font-mono text-center py-4">No airspace zones for this state.</p>}
+            {zones.length === 0 && <p className="text-xs text-muted font-mono text-center py-4">No protected zones here.</p>}
           </div>
 
           {/* Start New Patrol */}
-          <form onSubmit={handleStartMission} className="mt-5 pt-5 border-t border-[#1F2E45] space-y-3">
-            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider font-bold block">Start New Patrol</span>
-            <select value={selectedZoneId} onChange={e => setSelectedZoneId(e.target.value)} className="w-full bg-[#1F2937] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white">
-              <option value="">Select zone…</option>
-              {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
-            </select>
-            <select value={selectedDroneId} onChange={e => setSelectedDroneId(e.target.value)} className="w-full bg-[#1F2937] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white">
-              <option value="">Select available drone…</option>
-              {availableDrones.map(d => <option key={d.id} value={d.id}>{d.call_sign} ({d.battery_level.toFixed(0)}%)</option>)}
-            </select>
-            <select value={pattern} onChange={e => setPattern(e.target.value)} className="w-full bg-[#1F2937] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white">
-              {PATTERNS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)} pattern</option>)}
-            </select>
-            <button type="submit" disabled={submitting} className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg text-xs font-bold text-white uppercase tracking-wider disabled:opacity-50">
-              {submitting ? 'Starting…' : 'Start Patrol'}
+          <form onSubmit={handleStartMission} className="mt-5 pt-5 border-t border-border space-y-3">
+            <span className="text-[11px] font-mono text-muted uppercase tracking-wider font-bold block">Send a drone on patrol</span>
+            <div>
+              <label htmlFor="patrol-zone" className="sr-only">Zone</label>
+              <select id="patrol-zone" value={selectedZoneId} onChange={e => setSelectedZoneId(e.target.value)} className={SELECT}>
+                <option value="">Choose a zone…</option>
+                {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="patrol-drone" className="sr-only">Drone</label>
+              <select id="patrol-drone" value={selectedDroneId} onChange={e => setSelectedDroneId(e.target.value)} className={SELECT}>
+                <option value="">Choose a drone…</option>
+                {availableDrones.map(d => <option key={d.id} value={d.id}>{d.call_sign} ({d.battery_level.toFixed(0)}%)</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="patrol-pattern" className="sr-only">Patrol pattern</label>
+              <select id="patrol-pattern" value={pattern} onChange={e => setPattern(e.target.value)} className={SELECT}>
+                {PATTERNS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)} pattern</option>)}
+              </select>
+            </div>
+            <button type="submit" disabled={submitting} className={`w-full min-h-[44px] bg-accent text-on-solid rounded-xl text-xs font-bold uppercase tracking-wider transition-opacity duration-150 hover:opacity-90 disabled:opacity-50 ${FOCUS}`}>
+              {submitting ? 'Starting…' : 'Start patrol'}
             </button>
           </form>
         </div>
@@ -202,8 +219,8 @@ function Surveillance() {
         {/* Missions */}
         <div className="bg-surface rounded-2xl p-5 border border-border">
           <div className="flex items-center gap-2 mb-4">
-            <MapPinned className="h-4 w-4 text-cyan-400" />
-            <h3 className="font-bold text-sm text-white uppercase tracking-wider">Patrol Missions</h3>
+            <MapPinned className="h-4 w-4 text-muted" aria-hidden="true" />
+            <h3 className="font-bold text-sm text-text uppercase tracking-wider">Patrols</h3>
           </div>
           <div className="space-y-3">
             {loading ? (
@@ -211,30 +228,30 @@ function Surveillance() {
             ) : missions.map(m => {
               const drone = drones.find(d => d.id === m.current_drone_id);
               return (
-                <div key={m.id} className="p-3 rounded-xl border border-slate-800 bg-slate-900/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-white">{drone ? drone.call_sign : 'Unassigned'} · {m.patrol_pattern}</span>
-                    <span className={`text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full border ${MISSION_STATUS_STYLE[m.status] || MISSION_STATUS_STYLE.planned}`}>{m.status}</span>
+                <div key={m.id} className="p-3 rounded-xl border border-border bg-page">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-xs font-bold text-text truncate">{drone ? drone.call_sign : 'Unassigned'} · {m.patrol_pattern}</span>
+                    <span className={`status-badge font-mono uppercase flex-shrink-0 ${MISSION_BADGE[m.status] || MISSION_BADGE.planned}`}>{m.status}</span>
                   </div>
-                  <div className="text-[9px] text-gray-500 font-mono mb-2">Waypoint {m.current_waypoint_index + 1}/{m.waypoints.length} · {m.mission_logs.length} log entries</div>
+                  <div className="text-[10px] text-muted font-mono mb-2 tabular-nums">Waypoint {m.current_waypoint_index + 1} of {m.waypoints.length} · {m.mission_logs.length} log entries</div>
                   <div className="flex gap-1.5">
                     {m.status === 'active' && (
                       <>
-                        <button onClick={() => missionAction(m.id, 'pause')} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-[9px] font-bold text-gray-300 uppercase flex items-center justify-center gap-1"><Pause className="h-3 w-3" /> Pause</button>
-                        <button onClick={() => missionAction(m.id, 'handoff')} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-[9px] font-bold text-gray-300 uppercase flex items-center justify-center gap-1"><RefreshCw className="h-3 w-3" /> Handoff</button>
+                        <button onClick={() => missionAction(m.id, 'pause')} className={`${MISSION_BTN} bg-surface border border-border-strong text-text hover:bg-border`}><Pause className="h-3 w-3" aria-hidden="true" /> Pause</button>
+                        <button onClick={() => missionAction(m.id, 'handoff')} className={`${MISSION_BTN} bg-surface border border-border-strong text-text hover:bg-border`}><RefreshCw className="h-3 w-3" aria-hidden="true" /> Hand off</button>
                       </>
                     )}
                     {m.status === 'paused' && (
-                      <button onClick={() => missionAction(m.id, 'resume')} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-[9px] font-bold text-gray-300 uppercase flex items-center justify-center gap-1"><Play className="h-3 w-3" /> Resume</button>
+                      <button onClick={() => missionAction(m.id, 'resume')} className={`${MISSION_BTN} bg-surface border border-border-strong text-text hover:bg-border`}><Play className="h-3 w-3" aria-hidden="true" /> Resume</button>
                     )}
                     {['active', 'paused'].includes(m.status) && (
-                      <button onClick={() => missionAction(m.id, 'abort')} className="flex-1 py-1.5 bg-red-900/40 hover:bg-red-900/60 rounded-lg text-[9px] font-bold text-red-400 uppercase flex items-center justify-center gap-1"><Square className="h-3 w-3" /> Abort</button>
+                      <button onClick={() => missionAction(m.id, 'abort')} className={`${MISSION_BTN} bg-status-critical border border-status-critical text-on-solid hover:opacity-90`}><Square className="h-3 w-3" aria-hidden="true" /> Stop</button>
                     )}
                   </div>
                 </div>
               );
             })}
-            {!loading && missions.length === 0 && <p className="text-xs text-gray-600 font-mono text-center py-4">No patrol missions for this state yet.</p>}
+            {!loading && missions.length === 0 && <p className="text-xs text-muted font-mono text-center py-4">No patrols running here yet.</p>}
           </div>
         </div>
       </div>
