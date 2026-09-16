@@ -1,7 +1,8 @@
-import React from 'react';
-import { Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Sun, Moon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import useRapidStore from '../../store/rapidStore';
+import { getTheme, toggleTheme } from '../../store/theme';
 
 export default function TopCommandBar() {
   const stats = useRapidStore(useShallow(s => s.getVisibleStats()));
@@ -10,6 +11,7 @@ export default function TopCommandBar() {
   const activeState = useRapidStore(s => s.activeState);
   const states = useRapidStore(s => s.states);
   const activeStateName = states.find(s => s.code === activeState)?.name || 'GOA';
+  const [theme, setThemeState] = useState(getTheme);
 
   return (
     <header className="h-16 bg-surface border-b border-border px-6 flex items-center justify-between select-none relative z-50 flex-shrink-0">
@@ -61,6 +63,13 @@ export default function TopCommandBar() {
             {(currentTime instanceof Date ? currentTime : new Date(currentTime)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
           </span>
         </div>
+        <button
+          onClick={() => setThemeState(toggleTheme())}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          className="p-2 rounded-lg border border-border text-muted hover:text-accent hover:border-accent/40 transition-colors"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
       </div>
     </header>
   );
