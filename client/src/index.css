@@ -68,16 +68,7 @@ body {
 /* ==========================================================================
    Leaflet basemap
    ========================================================================== */
-.leaflet-container {
-  background: var(--color-page);
-  font-family: inherit;
-}
-/* No tile filter. A `filter: invert()` on tile output re-tints every road,
-   waterway and vegetation pixel to a false colour on every pan and zoom —
-   wrong information, not styling. RapidMap.jsx now requests a genuine light
-   basemap (CARTO Positron) by default and a genuine dark basemap
-   (CARTO Dark Matter) under [data-theme="dark"], so no filter is needed in
-   either theme. */
+
 
 /* ==========================================================================
    Status encoding primitives (Cool Console convention: a small dot plus a

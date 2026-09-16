@@ -1,36 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import L from 'leaflet';
-// Leaflet's CSS is imported here rather than linked from index.html; see the
-// matching note in RapidMap.jsx.
-import 'leaflet/dist/leaflet.css';
+import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+import { Polyline } from '../components/map/gmapPrimitives';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, MapPin, Send, AlertTriangle, Phone, User, CheckCircle, Shield, Play, Activity } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
-// Custom icons using inline SVG shapes to prevent broken image references
-const citizenIcon = L.divIcon({
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="absolute h-8 w-8 bg-orange-500/30 rounded-full animate-ping"></div>
-      <div class="h-4 w-4 bg-orange-600 border-2 border-white rounded-full shadow-lg"></div>
-    </div>
-  `,
-  className: 'custom-citizen-icon',
-  iconSize: [20, 20]
-});
+const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const MAPS_MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID';
 
-const droneIcon = (heading) => L.divIcon({
-  html: `
-    <div style="transform: rotate(${heading}deg); transition: transform 0.2s linear;" class="flex items-center justify-center">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 22L12 17L22 22L12 2Z" fill="#06B6D4" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+const citizenMarker = (
+  <div className="relative flex items-center justify-center">
+    <div className="h-4 w-4 bg-status-urgent border-2 border-white rounded-full shadow-lg" />
+  </div>
+);
+
+// Cached by heading bucket for the same reason the operator map caches its
+// markers: a fresh identity each render rebuilds the marker's DOM while the
+// tracking poll runs every two seconds.
+const citizenDroneCache = new Map();
+
+const droneMarker = (heading) => {
+  const bucket = (Math.round(heading / 15) * 15) % 360;
+  const cached = citizenDroneCache.get(bucket);
+  if (cached) return cached;
+  const node = (
+    <div style={{ transform: `rotate(${bucket}deg)`, transition: 'transform 0.2s linear' }} className="flex items-center justify-center">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2L2 22L12 17L22 22L12 2Z" fill="#1E3A8A" stroke="white" strokeWidth="2" strokeLinejoin="round" />
       </svg>
     </div>
-  `,
-  className: 'custom-drone-icon',
-  iconSize: [28, 28]
-});
+  );
+  citizenDroneCache.set(bucket, node);
+  return node;
+};
 
 function Help() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,6 +46,7 @@ function Help() {
   const [coordinates, setCoordinates] = useState({ lat: 15.2993, lng: 74.1240 });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [droneInfoOpen, setDroneInfoOpen] = useState(false);
   const [formError, setFormError] = useState(null);
   const [gpsError, setGpsError] = useState(null);
 
@@ -362,36 +365,64 @@ function Help() {
 
             {/* Map representation */}
             <div className="h-56 rounded-2xl overflow-hidden border border-gray-800 mb-4 z-10 relative">
-              <MapContainer
-                center={[coordinates.lat, coordinates.lng]}
-                zoom={13}
-                style={{ height: '100%', width: '100%' }}
-                zoomControl={false}
-              >
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-                <Marker position={[coordinates.lat, coordinates.lng]} icon={citizenIcon} />
-                {drone && (
-                  <>
-                    <Marker position={[drone.latitude, drone.longitude]} icon={droneIcon(drone.heading)}>
-                      <Popup>
-                        <div className="text-xs font-mono text-black font-semibold">
-                          <p>Call Sign: {drone.call_sign}</p>
-                          <p>Alt: {drone.altitude.toFixed(0)}m</p>
-                        </div>
-                      </Popup>
-                    </Marker>
-                    <Polyline
-                      positions={[
-                        [drone.latitude, drone.longitude],
-                        [coordinates.lat, coordinates.lng]
-                      ]}
-                      color="#06B6D4"
-                      dashArray="5, 10"
-                      weight={2}
-                    />
-                  </>
-                )}
-              </MapContainer>
+              {!MAPS_API_KEY ? (
+                <div className="h-full w-full bg-page flex flex-col items-center justify-center gap-1 p-4 text-center">
+                  <p className="text-xs text-status-warning font-semibold">Map unavailable</p>
+                  <p className="font-mono text-[11px] text-text tabular-nums">
+                    You are at {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)}
+                  </p>
+                  {drone && (
+                    <p className="font-mono text-[11px] text-muted tabular-nums">
+                      {drone.call_sign} at {drone.latitude.toFixed(4)}, {drone.longitude.toFixed(4)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <APIProvider apiKey={MAPS_API_KEY}>
+                  <Map
+                    mapId={MAPS_MAP_ID}
+                    defaultCenter={{ lat: coordinates.lat, lng: coordinates.lng }}
+                    defaultZoom={13}
+                    disableDefaultUI
+                    gestureHandling="greedy"
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <AdvancedMarker position={{ lat: coordinates.lat, lng: coordinates.lng }}>
+                      {citizenMarker}
+                    </AdvancedMarker>
+                    {drone && (
+                      <>
+                        <AdvancedMarker
+                          position={{ lat: drone.latitude, lng: drone.longitude }}
+                          onClick={() => setDroneInfoOpen(true)}
+                        >
+                          {droneMarker(drone.heading)}
+                        </AdvancedMarker>
+                        {droneInfoOpen && (
+                          <InfoWindow
+                            position={{ lat: drone.latitude, lng: drone.longitude }}
+                            onCloseClick={() => setDroneInfoOpen(false)}
+                          >
+                            <div className="text-xs font-mono font-semibold">
+                              <p>Call Sign: {drone.call_sign}</p>
+                              <p>Alt: {drone.altitude.toFixed(0)}m</p>
+                            </div>
+                          </InfoWindow>
+                        )}
+                        <Polyline
+                          path={[
+                            { lat: drone.latitude, lng: drone.longitude },
+                            { lat: coordinates.lat, lng: coordinates.lng }
+                          ]}
+                          strokeColor="#1E3A8A"
+                          strokeWeight={2}
+                          dashed
+                        />
+                      </>
+                    )}
+                  </Map>
+                </APIProvider>
+              )}
             </div>
 
             {/* Drone Telemetry details for Citizen info */}
