@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, PieChart as PieIcon, LineChart as LineIcon, Activity, Battery, ShieldAlert, CheckSquare } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { SkeletonStatTile, SkeletonChart } from '../components/shared/Skeleton';
+import useThemeTokens from '../components/shared/useThemeTokens';
 
-// Colors for category chart pie sectors
-const COLORS = ['#06B6D4', '#F97316', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+const TILE = 'bg-surface rounded-2xl p-5 border border-border';
+const TILE_LABEL = 'text-[11px] font-mono text-muted uppercase font-semibold tracking-wide';
+const TILE_VALUE = 'text-2xl font-bold text-text mt-2 tabular-nums';
+const TILE_UNIT = 'text-xs text-muted font-normal';
+const CHART_CARD = 'bg-surface rounded-2xl p-5 border border-border flex flex-col h-80';
+const CHART_TITLE = 'font-bold text-xs uppercase tracking-wider text-text';
 
 function Analytics() {
   // These defaults only need to be structurally valid. `loading` gates a
@@ -20,6 +25,16 @@ function Analytics() {
     dailyTrends: [],
     droneUsage: []
   });
+
+  const t = useThemeTokens();
+  const axis = { stroke: t.muted, fontSize: 11 };
+  const tooltipStyle = {
+    backgroundColor: t.surface,
+    borderColor: t.borderStrong,
+    color: t.text,
+    borderRadius: 12,
+    fontSize: 12,
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -55,60 +70,60 @@ function Analytics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-[#1F2E45] pb-4">
-        <div className="bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/20">
-          <BarChart3 className="h-6 w-6 text-cyan-400" />
+      <div className="flex items-center gap-3 border-b border-border pb-4">
+        <div className="bg-accent/10 p-2.5 rounded-xl border border-accent/30">
+          <BarChart3 className="h-6 w-6 text-accent" aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-xl font-bold tracking-wide text-white">Operations Performance Analytics</h2>
-          <p className="text-xs text-gray-400 font-mono mt-0.5">Live metrics reporting, response latency audits, and equipment usage analysis.</p>
+          <h2 className="text-xl font-bold tracking-wide text-text">Fleet analytics</h2>
+          <p className="text-xs text-muted font-mono mt-0.5">How busy the fleet is, how fast calls are answered, and how the batteries are holding up.</p>
         </div>
       </div>
 
       {/* Overview stats cards */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map(i => <SkeletonStatTile key={i} />)}
         </div>
       ) : (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="bg-surface rounded-2xl p-5 border border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-gray-400 uppercase font-semibold">Drone Utilization</span>
-            <Activity className="h-4.5 w-4.5 text-cyan-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={TILE}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={TILE_LABEL}>Drones in flight</span>
+            <Activity className="h-4 w-4 text-muted flex-shrink-0" aria-hidden="true" />
           </div>
-          <p className="text-2xl font-black text-white mt-2">
-            {summary.activeDrones} <span className="text-xs text-gray-400 font-normal">/ {summary.totalDrones} in flight</span>
+          <p className={TILE_VALUE}>
+            {summary.activeDrones} <span className={TILE_UNIT}>of {summary.totalDrones}</span>
           </p>
         </div>
 
-        <div className="bg-surface rounded-2xl p-5 border border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-gray-400 uppercase font-semibold">Active Emergencies</span>
-            <ShieldAlert className="h-4.5 w-4.5 text-orange-400 animate-pulse" />
+        <div className={TILE}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={TILE_LABEL}>Open emergencies</span>
+            <ShieldAlert className={`h-4 w-4 flex-shrink-0 ${summary.activeIncidents > 0 ? 'text-status-urgent' : 'text-muted'}`} aria-hidden="true" />
           </div>
-          <p className="text-2xl font-black text-white mt-2">
-            {summary.activeIncidents} <span className="text-xs text-gray-400 font-normal">pending response</span>
+          <p className={TILE_VALUE}>
+            {summary.activeIncidents} <span className={TILE_UNIT}>awaiting a drone</span>
           </p>
         </div>
 
-        <div className="bg-surface rounded-2xl p-5 border border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-gray-400 uppercase font-semibold">Average Battery Reserve</span>
-            <Battery className="h-4.5 w-4.5 text-emerald-400" />
+        <div className={TILE}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={TILE_LABEL}>Average battery</span>
+            <Battery className="h-4 w-4 text-muted flex-shrink-0" aria-hidden="true" />
           </div>
-          <p className="text-2xl font-black text-white mt-2">
-            {summary.averageBattery}% <span className="text-xs text-gray-400 font-normal">fleet average</span>
+          <p className={TILE_VALUE}>
+            {summary.averageBattery}% <span className={TILE_UNIT}>across the fleet</span>
           </p>
         </div>
 
-        <div className="bg-surface rounded-2xl p-5 border border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-gray-400 uppercase font-semibold">Cases Resolved</span>
-            <CheckSquare className="h-4.5 w-4.5 text-emerald-400" />
+        <div className={TILE}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={TILE_LABEL}>Cases closed</span>
+            <CheckSquare className="h-4 w-4 text-muted flex-shrink-0" aria-hidden="true" />
           </div>
-          <p className="text-2xl font-black text-white mt-2">
-            {summary.resolvedIncidents} <span className="text-xs text-gray-400 font-normal">total cases resolved</span>
+          <p className={TILE_VALUE}>
+            {summary.resolvedIncidents} <span className={TILE_UNIT}>all time</span>
           </p>
         </div>
       </div>
@@ -116,93 +131,102 @@ function Analytics() {
 
       {/* Charts Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <SkeletonChart />
           <SkeletonChart />
           <div className="lg:col-span-2"><SkeletonChart /></div>
         </div>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Incident alarm trends (Line chart) */}
-        <div className="bg-surface rounded-2xl p-5 border border-border flex flex-col h-80">
+        <div className={CHART_CARD}>
           <div className="flex items-center gap-2 mb-4">
-            <LineIcon className="h-4.5 w-4.5 text-cyan-400" />
-            <h3 className="font-bold text-xs uppercase tracking-wider text-white">Daily Emergency Dispatch Trends</h3>
+            <LineIcon className="h-4 w-4 text-muted" aria-hidden="true" />
+            <h3 className={CHART_TITLE}>Calls per day</h3>
           </div>
           <div className="flex-1 min-h-0 text-xs">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={charts.dailyTrends} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1F2E45" opacity={0.3} />
-                <XAxis dataKey="day" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" allowDecimals={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#1F2E45', color: '#fff' }} />
-                <Line type="monotone" dataKey="count" stroke="#06B6D4" strokeWidth={2.5} activeDot={{ r: 6 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
+                <XAxis dataKey="day" {...axis} />
+                <YAxis allowDecimals={false} {...axis} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: t.borderStrong }} />
+                <Line type="monotone" dataKey="count" name="Calls" stroke={t.accent} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Categories ratio breakdown (Pie Chart) */}
-        <div className="bg-surface rounded-2xl p-5 border border-border flex flex-col h-80">
+        <div className={CHART_CARD}>
           <div className="flex items-center gap-2 mb-4">
-            <PieIcon className="h-4.5 w-4.5 text-cyan-400" />
-            <h3 className="font-bold text-xs uppercase tracking-wider text-white">Incidents by Category</h3>
+            <PieIcon className="h-4 w-4 text-muted" aria-hidden="true" />
+            <h3 className={CHART_TITLE}>What people call about</h3>
           </div>
           <div className="flex-1 min-h-0 text-xs flex items-center justify-center">
             {charts.categories.length > 0 ? (
-              <div className="w-full h-full flex flex-col md:flex-row items-center justify-around">
-                <div className="w-48 h-48">
+              <div className="w-full h-full flex flex-col md:flex-row items-center justify-around gap-3">
+                <div className="w-40 h-40 flex-shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={charts.categories}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={75}
+                        innerRadius={44}
+                        outerRadius={68}
                         paddingAngle={3}
                         dataKey="value"
+                        isAnimationActive={false}
                       >
                         {charts.categories.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={t.chart?.[index % 7]} stroke={t.surface} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#1F2E45' }} />
+                      <Tooltip contentStyle={tooltipStyle} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-gray-400 max-w-[200px]">
+                {/* The legend is the second channel. Adjacent hues in the
+                    chart palette sit only ~1.2:1 apart, so the slice is
+                    never identified by colour alone. */}
+                <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] font-mono text-muted max-w-[220px]">
                   {charts.categories.map((entry, index) => (
-                    <div key={entry.name} className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span>{entry.name}: <b>{entry.value}</b></span>
-                    </div>
+                    <li key={entry.name} className="flex items-center gap-1.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
+                        style={{ backgroundColor: t.chart?.[index % 7] }}
+                        aria-hidden="true"
+                      ></span>
+                      <span className="truncate">{entry.name} <b className="text-text tabular-nums">{entry.value}</b></span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ) : (
-              <p className="text-gray-500 italic">Standby mode: awaiting case logs to populate ratios.</p>
+              <p className="text-muted">No calls logged yet.</p>
             )}
           </div>
         </div>
 
         {/* Drone reserve levels (Bar Chart) */}
-        <div className="bg-surface rounded-2xl p-5 border border-border flex flex-col h-80 lg:col-span-2">
+        <div className={`${CHART_CARD} lg:col-span-2`}>
           <div className="flex items-center gap-2 mb-4">
-            <Battery className="h-4.5 w-4.5 text-cyan-400" />
-            <h3 className="font-bold text-xs uppercase tracking-wider text-white">Drone Energy Reserves</h3>
+            <Battery className="h-4 w-4 text-muted" aria-hidden="true" />
+            <h3 className={CHART_TITLE}>Battery by drone</h3>
           </div>
           <div className="flex-1 min-h-0 text-xs">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.droneUsage} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1F2E45" opacity={0.3} />
-                <XAxis dataKey="name" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" domain={[0, 100]} />
-                <Tooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#1F2E45', color: '#fff' }} />
-                <Bar dataKey="battery" fill="#06B6D4" radius={[6, 6, 0, 0]}>
+                <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
+                <XAxis dataKey="name" {...axis} />
+                <YAxis domain={[0, 100]} {...axis} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: t.border }} />
+                <Bar dataKey="battery" name="Battery %" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                   {charts.droneUsage.map((entry, index) => {
-                    const color = entry.battery < 25 ? '#EF4444' : entry.battery < 60 ? '#F59E0B' : '#10B981';
+                    // Same thresholds the fleet cards use, same tokens.
+                    const color = entry.battery < 25 ? t.critical : entry.battery < 60 ? t.warning : t.normal;
                     return <Cell key={`cell-${index}`} fill={color} />;
                   })}
                 </Bar>

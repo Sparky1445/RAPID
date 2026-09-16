@@ -32,6 +32,20 @@
   --status-warning: #A15C00;
   --status-urgent: #B5461A;
   --status-critical: #A3211D;
+
+  /* Categorical chart palette. Severity tokens say "how bad"; a pie of
+     incident categories is not a severity scale, so it needs its own seven
+     hues. Each one is >=3:1 against both --color-page and --color-surface
+     (WCAG 1.4.11 covers graphical objects), and every chart that uses them
+     labels its series by name as well, because adjacent hues here are only
+     ~1.2:1 apart from each other. */
+  --chart-1: #1E3A8A;
+  --chart-2: #B5461A;
+  --chart-3: #2F6B3A;
+  --chart-4: #6B3FA0;
+  --chart-5: #A15C00;
+  --chart-6: #0F6B72;
+  --chart-7: #8A2E5D;
 }
 
 /* Sourced from GitHub Primer's dark theme (github.com/primer/primitives) —
@@ -54,6 +68,14 @@
   --status-warning: #D29922;
   --status-urgent: #DB6D28;
   --status-critical: #F85149;
+
+  --chart-1: #58A6FF;
+  --chart-2: #DB6D28;
+  --chart-3: #3FB950;
+  --chart-4: #BC8CFF;
+  --chart-5: #D29922;
+  --chart-6: #39C5CF;
+  --chart-7: #FF7B9C;
 }
 
 html {
