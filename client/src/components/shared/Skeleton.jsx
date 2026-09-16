@@ -46,7 +46,7 @@ export function SkeletonCard() {
 // SecurityAudit.jsx's audit log.
 export function SkeletonRow() {
   return (
-    <div className="flex items-center justify-between gap-4 py-3 border-b border-gray-800/40">
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-border">
       <SkeletonBlock className="h-3 w-1/2" />
       <SkeletonBlock className="h-3 w-20" />
     </div>

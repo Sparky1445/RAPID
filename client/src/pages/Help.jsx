@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 // constructor used by the marker caches below.
 import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { Polyline } from '../components/map/gmapPrimitives';
+import useThemeTokens from '../components/shared/useThemeTokens';
 import Lenis from 'lenis';
 import { ShieldAlert, MapPin, Send, AlertTriangle, Phone, User, CheckCircle, Shield, Play, Activity } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -21,24 +22,29 @@ const citizenMarker = (
 // tracking poll runs every two seconds.
 const citizenDroneCache = new Map();
 
-const droneMarker = (heading) => {
+// An inline SVG fill cannot be a Tailwind class, so the resolved tokens come
+// in from the caller and go into the cache key: switch theme, get new
+// markers rather than the previous theme's.
+const droneMarker = (heading, accent, outline) => {
   const bucket = (Math.round(heading / 15) * 15) % 360;
-  const cached = citizenDroneCache.get(bucket);
+  const key = `${bucket}|${accent}|${outline}`;
+  const cached = citizenDroneCache.get(key);
   if (cached) return cached;
   const node = (
     <div style={{ transform: `rotate(${bucket}deg)`, transition: 'transform 0.2s linear' }} className="flex items-center justify-center">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 2L2 22L12 17L22 22L12 2Z" fill="#1E3A8A" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M12 2L2 22L12 17L22 22L12 2Z" fill={accent} stroke={outline} strokeWidth="2" strokeLinejoin="round" />
       </svg>
     </div>
   );
-  citizenDroneCache.set(bucket, node);
+  citizenDroneCache.set(key, node);
   return node;
 };
 
 function Help() {
   const [searchParams, setSearchParams] = useSearchParams();
   const trackingId = searchParams.get('id');
+  const t = useThemeTokens();
 
   // Form states
   const [name, setName] = useState('');
@@ -289,11 +295,14 @@ function Help() {
                   onClick={requestLocation}
                   className={`w-full min-h-[44px] py-3 rounded-xl border flex items-center justify-center gap-2 font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                     gpsShared
-                      ? 'bg-status-normal/10 border-status-normal/30 text-status-normal'
-                      : 'bg-status-urgent/10 border-status-urgent/30 text-status-urgent hover:bg-status-urgent/10'
+                      ? 'bg-status-normal/10 border-status-normal text-status-normal'
+                      : 'bg-status-urgent/10 border-status-urgent text-text hover:bg-status-urgent/20'
                   }`}
                 >
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
+                  {/* The label sits on a tint, and urgent-on-urgent-tint only
+                      reaches 4.1:1 at this size. The border and the pin carry
+                      the tone; the words stay body text. */}
+                  <MapPin className={`h-4 w-4 ${gpsShared ? '' : 'text-status-urgent'}`} aria-hidden="true" />
                   <span>
                     {gpsLoading
                       ? 'Finding your location…'
@@ -409,7 +418,7 @@ function Help() {
                           position={{ lat: drone.latitude, lng: drone.longitude }}
                           onClick={() => setDroneInfoOpen(true)}
                         >
-                          {droneMarker(drone.heading)}
+                          {droneMarker(drone.heading, t.accent, t.surface)}
                         </AdvancedMarker>
                         {droneInfoOpen && (
                           <InfoWindow
@@ -427,7 +436,7 @@ function Help() {
                             { lat: drone.latitude, lng: drone.longitude },
                             { lat: coordinates.lat, lng: coordinates.lng }
                           ]}
-                          strokeColor="#1E3A8A"
+                          strokeColor={t.accent}
                           strokeWeight={2}
                           dashed
                         />

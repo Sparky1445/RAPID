@@ -121,17 +121,22 @@ export const incidentMarker = (severity) => {
   return node;
 };
 
-export const droneMarker = (heading, status) => {
+// Google renders marker children as real DOM, but the arrow is an inline SVG
+// fill, so it needs a literal colour rather than a class. The caller passes
+// the resolved tokens in; the cache key carries them so a theme switch
+// rebuilds the markers instead of serving the old theme's arrows.
+export const droneMarker = (heading, status, tokens = {}) => {
   const bucket = (Math.round(heading / HEADING_BUCKET_DEGREES) * HEADING_BUCKET_DEGREES) % 360;
-  const key = `${status}|${bucket}`;
-  const cached = droneMarkerCache.get(key);
-  if (cached) return cached;
 
   const color =
-    status === 'Returning' ? '#A15C00'
-      : status === 'Patrolling' ? '#6B675E'
-        : ['Dispatched', 'En Route'].includes(status) ? '#1E3A8A'
-          : '#2F6B3A';
+    status === 'Returning' ? (tokens.warning || '#A15C00')
+      : status === 'Patrolling' ? (tokens.muted || '#6B675E')
+        : ['Dispatched', 'En Route'].includes(status) ? (tokens.accent || '#1E3A8A')
+          : (tokens.normal || '#2F6B3A');
+
+  const key = `${status}|${bucket}|${color}`;
+  const cached = droneMarkerCache.get(key);
+  if (cached) return cached;
 
   const node = (
     <div

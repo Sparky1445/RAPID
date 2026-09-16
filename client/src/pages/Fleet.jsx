@@ -261,8 +261,8 @@ function Fleet() {
                   disabled={!['Standby', 'maintenance'].includes(drone.status)}
                   className={`${BTN} ${
                     drone.status === 'maintenance'
-                      ? 'bg-status-normal/10 border-status-normal/30 text-status-normal hover:bg-status-normal/20'
-                      : 'bg-status-critical/10 border-status-critical/30 text-status-critical hover:bg-status-critical/20 disabled:opacity-40'
+                      ? 'bg-status-normal/10 border-status-normal text-status-normal hover:bg-status-normal/20'
+                      : 'bg-status-critical/10 border-status-critical text-status-critical hover:bg-status-critical/20 disabled:opacity-40'
                   }`}
                 >
                   <PenTool className="h-3.5 w-3.5" aria-hidden="true" />

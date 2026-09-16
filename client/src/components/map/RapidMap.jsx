@@ -5,6 +5,7 @@ import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow } from '@vis.
 import { useShallow } from 'zustand/react/shallow';
 import useRapidStore from '../../store/rapidStore';
 import { Polyline, Circle, Polygon, MapCamera } from './gmapPrimitives';
+import useThemeTokens from '../shared/useThemeTokens';
 import { policeStationMarker, rapidBaseMarker, incidentMarker, droneMarker, FLYING_STATUSES } from '../shared/utils';
 
 const FALLBACK_CENTER = { lat: 15.3995, lng: 73.8800 };
@@ -15,16 +16,10 @@ const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 // and may be committed; the API key must not be.
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID';
 
-const ACCENT = '#1E3A8A';
-const WARNING = '#A15C00';
-const URGENT = '#B5461A';
-const CRITICAL = '#A3211D';
-
 const HOLDING_STATUSES = ['On Scene', 'AI Monitoring', 'Hovering', 'Orbiting', 'Following Target', 'Awaiting Controller'];
 
-// No theme toggle ships in this pass, but the token system underneath
-// already supports one, so the map follows the data-theme attribute on
-// <html> whenever one is added.
+// The map's own basemap needs a boolean, not a colour, so this stays
+// separate from useThemeTokens.
 function useIsDarkTheme() {
   const [isDark, setIsDark] = useState(
     typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -96,6 +91,14 @@ export default function RapidMap() {
 
   const [info, setInfo] = useState(null);
   const isDark = useIsDarkTheme();
+  // Overlays are SVG drawn by Google, so they take resolved values rather
+  // than classes. Before this they were four hardcoded light-theme hexes
+  // that stayed put when the theme flipped.
+  const t = useThemeTokens();
+  const ACCENT = t.accent;
+  const WARNING = t.warning;
+  const URGENT = t.urgent;
+  const CRITICAL = t.critical;
 
   const mapCenter = mapConfig
     ? { lat: mapConfig.mapCenter.latitude, lng: mapConfig.mapCenter.longitude }
@@ -246,7 +249,7 @@ export default function RapidMap() {
                     });
                   }}
                 >
-                  {droneMarker(drone.heading, drone.status)}
+                  {droneMarker(drone.heading, drone.status, t)}
                 </AdvancedMarker>
               ))}
 
