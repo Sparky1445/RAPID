@@ -1,0 +1,9 @@
+# Store text files with LF in git; check them out however the platform
+# wants. Without this the whole tree churned CRLF on Windows: 107 files,
+# 14,500 lines, one of which was a real change.
+* text=auto eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.ico binary
