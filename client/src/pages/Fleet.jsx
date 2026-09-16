@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Battery, Compass, CheckCircle, AlertTriangle, ShieldCheck, PenTool, Link2, Eye, Cpu, Radio, User } from 'lucide-react';
 import { SkeletonCard } from '../components/shared/Skeleton';
+import { batteryTier, batteryBg } from '../components/shared/utils';
 
 function Fleet() {
   const [drones, setDrones] = useState([]);
@@ -81,210 +82,201 @@ function Fleet() {
     }
   };
 
+  // Close the stream modal on Escape. A modal that cannot be dismissed from
+  // the keyboard traps anyone not using a mouse.
+  useEffect(() => {
+    if (!editingDrone) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setEditingDrone(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editingDrone]);
+
+  // Density: cards at p-4 in a gap-4 grid rather than p-5/gap-6. This is a
+  // console — at 1080p that fits three columns with the diagnostics block
+  // still readable, instead of two with dead space between them.
+  const ROW = 'flex justify-between items-center';
+  const KEY = 'flex items-center gap-1.5 text-muted';
+  const VAL = 'text-text text-[11px] font-medium';
+  const ICON = 'h-3.5 w-3.5 text-muted flex-shrink-0';
+  const BTN = 'min-h-[44px] px-3 border rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-colors duration-150 flex items-center justify-center gap-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center gap-3 border-b border-[#1F2E45] pb-4">
-        <div className="bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/20">
-          <Layers className="h-6 w-6 text-cyan-400" />
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 border-b border-border pb-4">
+        <div className="bg-accent/10 p-2.5 rounded-xl border border-accent/30">
+          <Layers className="h-6 w-6 text-accent" aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-xl font-bold tracking-wide text-white">RAPID Operations Fleet</h2>
-          <p className="text-xs text-gray-400 font-mono mt-0.5">Control live fleet hardware states, diagnostic streams, and maintenance logs.</p>
+          <h2 className="text-xl font-bold tracking-wide text-text">RAPID Operations Fleet</h2>
+          <p className="text-xs text-muted font-mono mt-0.5">Control live fleet hardware states, diagnostic streams, and maintenance logs.</p>
         </div>
       </div>
 
-      {/* Main Drones Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           [0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)
         ) : drones.map((drone) => {
+          const tier = batteryTier(drone.battery_level);
 
-          const batteryBar = drone.battery_level > 60
-            ? 'bg-emerald-500'
-            : drone.battery_level > 20
-            ? 'bg-amber-500'
-            : 'bg-red-500';
-
-          // Determine health status
           const healthStatus = drone.status === 'maintenance'
             ? 'Maintenance'
             : drone.battery_level < 20
-            ? 'Warning (Low Bat)'
+            ? 'Low battery'
             : 'Nominal';
+          // Filled vs outline is the shape channel: a card in maintenance
+          // reads as more urgent than one merely warning, without relying on
+          // hue alone (DIRECTION.md section 3).
+          const healthTone = healthStatus === 'Nominal' ? 'normal'
+            : healthStatus === 'Maintenance' ? 'critical' : 'warning';
 
-          const healthColor = healthStatus === 'Nominal'
-            ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-            : healthStatus === 'Maintenance'
-            ? 'text-red-400 border-red-500/20 bg-red-500/5'
-            : 'text-amber-400 border-amber-500/20 bg-amber-500/5';
+          const returnState = drone.returnStatus || (drone.battery_level > 30 ? 'SAFE' : 'CRITICAL');
+          const returnTone = returnState === 'SAFE' ? 'normal'
+            : returnState === 'RETURN_RECOMMENDED' ? 'warning' : 'critical';
 
-          // Camera vision description
           const cameraModeStr = !['Standby', 'Charging', 'maintenance'].includes(drone.status)
             ? (drone.camera_mode || 'Auto (Day/Night)')
             : 'Standby / Lens Docked';
 
+          const statusTone = drone.status === 'Standby' ? null
+            : drone.status === 'maintenance' ? 'critical' : 'normal';
+
           return (
             <div
               key={drone.id}
-              className={`bg-surface rounded-2xl p-5 border transition-all duration-300 relative overflow-hidden ${
-                drone.status === 'maintenance'
-                  ? 'border-red-500/20 bg-red-950/5'
-                  : 'border-border hover:border-accent/40'
+              className={`bg-surface rounded-2xl p-4 border transition-colors duration-150 ${
+                drone.status === 'maintenance' ? 'border-status-critical/30' : 'border-border'
               }`}
             >
-              {/* Card Status Indicator */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-extrabold text-base text-white tracking-wide">{drone.call_sign}</h3>
-                  <span className="text-[10px] font-mono text-gray-500">{drone.model}</span>
+              <div className="flex justify-between items-start mb-3 gap-2">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-base text-text tracking-wide truncate">{drone.call_sign}</h3>
+                  <span className="text-[10px] font-mono text-muted">{drone.model}</span>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 border rounded-full uppercase ${
-                    drone.status === 'Standby'
-                      ? 'text-gray-400 bg-gray-800/40 border-gray-700'
-                      : drone.status === 'maintenance'
-                      ? 'text-red-400 bg-red-500/10 border-red-500/20'
-                      : 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20 animate-pulse'
-                  }`}>
-                    {drone.status}
-                  </span>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  {statusTone ? (
+                    <span className={`status-badge status-badge--${statusTone} status-badge--outline font-mono uppercase`}>
+                      <span className={`status-dot status-dot--${statusTone}`} aria-hidden="true" />
+                      {drone.status}
+                    </span>
+                  ) : (
+                    <span className="status-badge border-border text-muted font-mono uppercase">{drone.status}</span>
+                  )}
                   {drone.is_hardware_active && (
-                    <span className="text-[8px] font-mono text-emerald-400 mt-1 uppercase font-bold tracking-widest animate-pulse">
-                      📡 Live HW Link
+                    <span className="text-[9px] font-mono text-status-normal uppercase font-bold tracking-widest">
+                      Live HW link
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Battery Indicator */}
-              <div className="mb-4">
-                <div className="flex justify-between text-xs font-mono mb-1 text-gray-400">
-                  <span>Battery Reserve:</span>
-                  <span className="font-bold">{drone.battery_level.toFixed(0)}%</span>
+              <div className="mb-3">
+                <div className="flex justify-between text-xs font-mono mb-1 text-muted">
+                  <span>Battery reserve</span>
+                  <span className="font-bold text-text tabular-nums">{drone.battery_level.toFixed(0)}%</span>
                 </div>
-                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div style={{ width: `${drone.battery_level}%` }} className={`h-full ${batteryBar} transition-all duration-500`}></div>
+                <div
+                  className="w-full h-2 bg-border rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-valuenow={Math.round(drone.battery_level)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${drone.call_sign} battery`}
+                >
+                  <div style={{ width: `${drone.battery_level}%` }} className={`h-full ${batteryBg(tier)} transition-[width] duration-500`}></div>
                 </div>
               </div>
 
-              {/* Detailed Diagnostics Info */}
-              <div className="space-y-2 text-xs font-mono text-gray-400 border-t border-gray-800/60 pt-3 mb-4">
-                
-                {/* Health Status */}
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5 text-gray-500" /> System Health:</span>
-                  <span className={`text-[10px] font-bold border rounded-full px-2 py-0.2 uppercase ${healthColor}`}>
+              <div className="space-y-1.5 text-xs font-mono text-muted border-t border-border pt-3 mb-3">
+                <div className={ROW}>
+                  <span className={KEY}><CheckCircle className={ICON} aria-hidden="true" /> System health</span>
+                  <span className={`status-badge status-badge--${healthTone} ${healthTone === 'critical' ? 'status-badge--filled' : 'status-badge--outline'} uppercase`}>
                     {healthStatus}
                   </span>
                 </div>
 
-                {/* Active Mission */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><Radio className="h-3.5 w-3.5 text-gray-500" /> Active Mission:</span>
-                  <span className="text-white text-[11px] font-bold">
-                    {drone.current_incident_id ? 'DISPATCHED ALARM' : 'STANDBY (BASE)'}
+                <div className={ROW}>
+                  <span className={KEY}><Radio className={ICON} aria-hidden="true" /> Active mission</span>
+                  <span className={VAL}>{drone.current_incident_id ? 'Dispatched' : 'Standby at base'}</span>
+                </div>
+
+                <div className={ROW}>
+                  <span className={KEY}><Compass className={ICON} aria-hidden="true" /> Flight time</span>
+                  <span className={`${VAL} tabular-nums`}>
+                    {!['Standby', 'Charging', 'maintenance'].includes(drone.status) ? '03m 42s' : '00m 00s'}
                   </span>
                 </div>
 
-                {/* Flight Time Duration */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><Compass className="h-3.5 w-3.5 text-gray-500" /> Flight Time:</span>
-                  <span className="text-white text-[11px]">
-                    {!['Standby', 'Charging', 'maintenance'].includes(drone.status) ? '03m 42s (Active)' : '00m 00s (Grounded)'}
+                <div className={ROW}>
+                  <span className={KEY}><Eye className={ICON} aria-hidden="true" /> Camera</span>
+                  <span className={VAL} title={drone.stream_url || 'Unlinked'}>
+                    {drone.stream_url ? `Online (${cameraModeStr})` : 'Offline'}
                   </span>
                 </div>
 
-                {/* Camera Status */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5 text-gray-500" /> Camera Status:</span>
-                  <span className="text-white text-[11px]" title={drone.stream_url || 'Unlinked'}>
-                    {drone.stream_url ? `Online (${cameraModeStr})` : 'Offline / Unlinked'}
+                <div className={ROW}>
+                  <span className={KEY}><Compass className={ICON} aria-hidden="true" /> GPS lock</span>
+                  <span className={`${VAL} tabular-nums`}>Locked, 14 satellites</span>
+                </div>
+
+                <div className="flex justify-between pl-5 text-[10px] text-muted">
+                  <span>Coordinates</span>
+                  <span className="tabular-nums">{drone.latitude.toFixed(4)}, {drone.longitude.toFixed(4)}</span>
+                </div>
+
+                <div className={ROW}>
+                  <span className={KEY}><Battery className={ICON} aria-hidden="true" /> Return feasibility</span>
+                  <span className={`status-badge status-badge--${returnTone} ${returnTone === 'critical' ? 'status-badge--filled' : 'status-badge--outline'} uppercase`}>
+                    {returnState}
                   </span>
                 </div>
 
-                {/* GPS Status */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><Compass className="h-3.5 w-3.5 text-gray-500" /> GPS Lock Status:</span>
-                  <span className="text-cyan-400 text-[11px] font-bold">
-                    LOCKED (14 SATs)
+                <div className={ROW}>
+                  <span className={KEY}><Compass className={ICON} aria-hidden="true" /> Distance from base</span>
+                  <span className={`${VAL} tabular-nums`}>
+                    {drone.distToBaseKm !== undefined ? `${drone.distToBaseKm} km` : '0.00 km'}
                   </span>
                 </div>
 
-                {/* GPS Locked coordinates */}
-                <div className="flex justify-between pl-4 text-[10px] text-gray-500">
-                  <span>Coordinates:</span>
-                  <span>{drone.latitude.toFixed(4)}, {drone.longitude.toFixed(4)}</span>
-                </div>
-
-                {/* Return Feasibility (Command 3) */}
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1"><Battery className="h-3.5 w-3.5 text-gray-500" /> Return Feasibility:</span>
-                  <span className={`text-[10px] font-bold border rounded-full px-2 py-0.5 uppercase ${
-                    drone.returnStatus === 'SAFE'
-                      ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
-                      : drone.returnStatus === 'RETURN_RECOMMENDED'
-                      ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
-                      : 'text-red-400 border-red-500/30 bg-red-500/10 animate-pulse'
-                  }`}>
-                    {drone.returnStatus || (drone.battery_level > 30 ? 'SAFE' : 'CRITICAL')}
+                <div className={ROW}>
+                  <span className={KEY}><Cpu className={ICON} aria-hidden="true" /> AI classification</span>
+                  <span className={VAL}>
+                    {!['Standby', 'Charging', 'maintenance'].includes(drone.status) ? 'Monitoring' : 'Idle'}
                   </span>
                 </div>
 
-                {/* Distance to Base */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><Compass className="h-3.5 w-3.5 text-gray-500" /> Distance from Base:</span>
-                  <span className="text-white text-[11px] font-mono">
-                    {drone.distToBaseKm !== undefined ? `${drone.distToBaseKm} km` : '0.00 km (At Base)'}
-                  </span>
+                <div className={ROW}>
+                  <span className={KEY}><User className={ICON} aria-hidden="true" /> Controller</span>
+                  <span className={VAL}>Officer Ananya Fernandes</span>
                 </div>
 
-                {/* AI Status */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5 text-gray-500" /> AI Classification:</span>
-                  <span className="text-white text-[11px]">
-                    {!['Standby', 'Charging', 'maintenance'].includes(drone.status) ? 'Monitoring / Tracking' : 'Standby / Idle'}
-                  </span>
-                </div>
-
-                {/* Operator/Controller */}
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1"><User className="h-3.5 w-3.5 text-gray-500" /> Controller Unit:</span>
-                  <span className="text-white text-[11px]">
-                    Officer Ananya Fernandes
-                  </span>
-                </div>
-
-                {/* Hardware specifications */}
-                <div className="flex justify-between text-[10px] pt-1 text-gray-600 border-t border-gray-800/40">
-                  <span>ESP32 Hardware ID:</span>
-                  <span className="font-mono">{drone.hardware_id || 'N/A'}</span>
+                <div className="flex justify-between text-[10px] pt-1.5 text-muted border-t border-border">
+                  <span>ESP32 hardware ID</span>
+                  <span className="font-mono">{drone.hardware_id || 'Not linked'}</span>
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-gray-800/40">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   onClick={() => toggleMaintenance(drone.id, drone.status)}
                   disabled={!['Standby', 'maintenance'].includes(drone.status)}
-                  className={`py-2 border rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
+                  className={`${BTN} ${
                     drone.status === 'maintenance'
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                      : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 disabled:opacity-40 disabled:hover:bg-transparent'
+                      ? 'bg-status-normal/10 border-status-normal/30 text-status-normal hover:bg-status-normal/20'
+                      : 'bg-status-critical/10 border-status-critical/30 text-status-critical hover:bg-status-critical/20 disabled:opacity-40'
                   }`}
                 >
-                  <PenTool className="h-3.5 w-3.5" />
-                  <span>{drone.status === 'maintenance' ? 'Resolve Ready' : 'Maintenance'}</span>
+                  <PenTool className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{drone.status === 'maintenance' ? 'Return to duty' : 'Maintenance'}</span>
                 </button>
                 <button
                   onClick={() => {
                     setEditingDrone(drone);
                     setStreamUrl(drone.stream_url || '');
                   }}
-                  className="py-2 bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5"
+                  className={`${BTN} bg-page border-border-strong text-text hover:bg-border`}
                 >
-                  <Link2 className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>Mount Stream</span>
+                  <Link2 className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                  <span>Mount stream</span>
                 </button>
               </div>
             </div>
@@ -292,24 +284,35 @@ function Fleet() {
         })}
       </div>
 
-      {/* Mount Stream Overlay Modal */}
       {editingDrone && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#161F30] border border-[#1F2E45] rounded-3xl p-6 shadow-2xl">
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-[#1F2E45] pb-3 mb-4">
-              Mount Livestream Feed on {editingDrone.call_sign}
+        <div
+          className="fixed inset-0 bg-text/50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingDrone(null); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mount-stream-title"
+            className="w-full max-w-md bg-surface border border-border rounded-3xl p-6 shadow-sm"
+          >
+            <h3 id="mount-stream-title" className="font-bold text-sm uppercase tracking-wider text-text border-b border-border pb-3 mb-4">
+              Mount livestream feed on {editingDrone.call_sign}
             </h3>
-            
+
             <form onSubmit={handleUpdateStream} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Livestream Feed URL (HLS / WebRTC signaller)</label>
+                <label htmlFor="stream-url" className="block text-xs font-mono uppercase text-muted mb-1">
+                  Livestream feed URL (HLS or WebRTC signaller)
+                </label>
                 <input
+                  id="stream-url"
                   type="url"
                   required
+                  autoFocus
                   value={streamUrl}
                   onChange={(e) => setStreamUrl(e.target.value)}
                   placeholder="e.g. https://domain.com/live/master.m3u8"
-                  className="w-full bg-[#1F2E45] border border-gray-700 focus:border-cyan-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
+                  className="w-full min-h-[44px] bg-page text-text placeholder:text-muted border border-border-strong rounded-xl px-3 py-2.5 text-xs outline-none transition-colors duration-150 focus:border-accent focus:ring-2 focus:ring-accent"
                 />
               </div>
 
@@ -317,15 +320,15 @@ function Fleet() {
                 <button
                   type="button"
                   onClick={() => setEditingDrone(null)}
-                  className="px-4 py-2 border border-gray-700 text-gray-400 hover:text-white rounded-xl text-xs font-mono"
+                  className="min-h-[44px] px-4 border border-border-strong text-muted hover:text-text rounded-xl text-xs font-mono transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl text-xs font-mono uppercase tracking-wider"
+                  className="min-h-[44px] px-5 bg-accent text-on-solid font-medium rounded-xl text-xs font-mono uppercase tracking-wider transition-colors duration-150 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
-                  Mount Stream Link
+                  Mount stream link
                 </button>
               </div>
             </form>
