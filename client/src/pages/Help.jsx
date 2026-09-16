@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+// Aliased: the component is called Map, which would shadow the global Map
+// constructor used by the marker caches below.
+import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { Polyline } from '../components/map/gmapPrimitives';
-import { motion, AnimatePresence } from 'framer-motion';
+import Lenis from 'lenis';
 import { ShieldAlert, MapPin, Send, AlertTriangle, Phone, User, CheckCircle, Shield, Play, Activity } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -55,6 +57,24 @@ function Help() {
   const [drone, setDrone] = useState(null);
   const [logs, setLogs] = useState([]);
   const [eta, setEta] = useState(null);
+
+  // Smooth scrolling, citizen portal only. Behind a motion check, and the
+  // page must still scroll natively if this never initialises — a person
+  // reporting an emergency on a screen reader matters more than easing.
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const lenis = new Lenis();
+    let frame;
+    const raf = (time) => {
+      lenis.raf(time);
+      frame = requestAnimationFrame(raf);
+    };
+    frame = requestAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(frame);
+      lenis.destroy();
+    };
+  }, []);
 
   // Poll tracking info if trackingId is present
   useEffect(() => {
@@ -200,66 +220,59 @@ function Help() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070B14] text-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-page text-text flex flex-col items-center justify-center p-4">
       {/* Header */}
       <div className="w-full max-w-md flex items-center justify-center gap-3 mb-6">
-        <ShieldAlert className="h-8 w-8 text-orange-500 animate-pulse" />
-        <h1 className="text-xl font-bold font-mono tracking-widest text-white uppercase">Emergency Help</h1>
+        <ShieldAlert className="h-8 w-8 text-status-critical" aria-hidden="true" />
+        <h1 className="text-xl font-bold font-mono tracking-widest text-text uppercase">Emergency Help</h1>
       </div>
 
-      <AnimatePresence mode="wait">
         {!trackingId ? (
           // Form Screen
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-md bg-[#111827] border border-gray-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
-          >
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-orange-500 to-red-500"></div>
+          <div className="view-enter w-full max-w-md bg-surface border border-border rounded-3xl p-6 shadow-sm relative overflow-hidden">
 
             <div className="mb-6">
               <h2 className="text-lg font-bold">Request emergency help</h2>
-              <p className="text-xs text-gray-400 mt-1">Fill in your details and tap Send for Help. Keep this page open to track the response.</p>
+              <p className="text-xs text-muted mt-1">Fill in your details and tap Send for Help. Keep this page open to track the response.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Your Name</label>
+                <label className="block text-xs font-mono uppercase text-muted mb-1">Your Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted" />
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your full name"
-                    className="w-full bg-[#1F2937] border border-gray-700 focus:border-orange-500 focus:outline-none rounded-xl pl-10 pr-4 py-2.5 text-sm"
+                    className="w-full min-h-[44px] bg-page text-text placeholder:text-muted border border-border-strong rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-accent focus:ring-2 focus:ring-accent"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Phone Number</label>
+                <label className="block text-xs font-mono uppercase text-muted mb-1">Phone Number</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted" />
                   <input
                     type="tel"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Enter phone number"
-                    className="w-full bg-[#1F2937] border border-gray-700 focus:border-orange-500 focus:outline-none rounded-xl pl-10 pr-4 py-2.5 text-sm"
+                    className="w-full min-h-[44px] bg-page text-text placeholder:text-muted border border-border-strong rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-accent focus:ring-2 focus:ring-accent"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Type of emergency</label>
+                <label className="block text-xs font-mono uppercase text-muted mb-1">Type of emergency</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-[#1F2937] border border-gray-700 focus:border-orange-500 focus:outline-none rounded-xl px-3 py-2.5 text-sm"
+                  className="w-full min-h-[44px] bg-page text-text border border-border-strong rounded-xl px-3 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-accent focus:ring-2 focus:ring-accent"
                 >
                   <option value="medical">Medical emergency or accident</option>
                   <option value="assault">Assault or active threat</option>
@@ -274,13 +287,13 @@ function Help() {
                 <button
                   type="button"
                   onClick={requestLocation}
-                  className={`w-full py-3 rounded-xl border flex items-center justify-center gap-2 font-medium transition-all ${
+                  className={`w-full min-h-[44px] py-3 rounded-xl border flex items-center justify-center gap-2 font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                     gpsShared
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                      : 'bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20'
+                      ? 'bg-status-normal/10 border-status-normal/30 text-status-normal'
+                      : 'bg-status-urgent/10 border-status-urgent/30 text-status-urgent hover:bg-status-urgent/10'
                   }`}
                 >
-                  <MapPin className={`h-4 w-4 ${gpsLoading ? 'animate-bounce' : ''}`} />
+                  <MapPin className="h-4 w-4" aria-hidden="true" />
                   <span>
                     {gpsLoading
                       ? 'Finding your location…'
@@ -290,21 +303,21 @@ function Help() {
                   </span>
                 </button>
                 {gpsShared && (
-                  <p className="text-[10px] text-center text-emerald-500 font-mono mt-1">Location confirmed.</p>
+                  <p className="text-[10px] text-center text-status-normal font-mono mt-1">Location confirmed.</p>
                 )}
                 {gpsError && (
-                  <p className="text-[10px] text-center text-red-400 font-mono mt-1">{gpsError}</p>
+                  <p role="alert" className="text-[10px] text-center text-status-critical font-mono mt-1">{gpsError}</p>
                 )}
               </div>
 
               {formError && (
-                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{formError}</p>
+                <p role="alert" className="text-xs text-status-critical bg-status-critical/10 border border-status-critical/30 rounded-xl px-3 py-2">{formError}</p>
               )}
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-orange-500/20"
+                className="w-full min-h-[48px] bg-status-critical text-on-solid font-medium rounded-xl px-4 flex items-center justify-center gap-2 transition-colors duration-150 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-critical"
               >
                 {isSubmitting ? (
                   <span>Sending…</span>
@@ -316,23 +329,18 @@ function Help() {
                 )}
               </button>
             </form>
-          </motion.div>
+          </div>
         ) : (
           // Tracking View
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-lg bg-[#111827] border border-gray-800 rounded-3xl p-6 shadow-2xl flex flex-col"
-          >
-            <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
+          <div className="view-enter w-full max-w-lg bg-surface border border-border rounded-3xl p-6 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <div>
-                <span className="text-[10px] text-orange-400 font-mono tracking-widest uppercase">Your report was received</span>
-                <h2 className="text-sm font-mono text-gray-400 font-semibold mt-0.5 truncate max-w-[200px]">ID: {trackingId}</h2>
+                <span className="text-[10px] text-status-urgent font-mono tracking-widest uppercase">Your report was received</span>
+                <h2 className="text-sm font-mono text-muted font-semibold mt-0.5 truncate max-w-[200px]">ID: {trackingId}</h2>
               </div>
-              <div className="bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-ping"></span>
-                <span className="text-[11px] font-bold text-red-400 font-mono uppercase">Tracking</span>
+              <div className="bg-status-critical/10 px-3 py-1 rounded-full border border-status-critical/30 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-status-critical motion-safe:animate-pulse"></span>
+                <span className="text-[11px] font-bold text-status-critical font-mono uppercase">Tracking</span>
               </div>
             </div>
 
@@ -347,15 +355,20 @@ function Help() {
                   const currentIdx = getStatusStep(incident.status);
                   const isDone = idx < currentIdx;
                   const isCurrent = idx === currentIdx;
+                  // Colour is never the only carrier: done steps get a tick,
+                  // the current step gets a thicker bar and aria-current, and
+                  // the label spells the state out for a screen reader.
                   return (
-                    <div key={step.key} className="text-center">
+                    <div key={step.key} className="text-center" aria-current={isCurrent ? 'step' : undefined}>
                       <div
-                        className={`h-2 rounded-full mb-1.5 transition-colors duration-500 ${
-                          isDone ? 'bg-emerald-500' : isCurrent ? 'bg-orange-500 animate-pulse' : 'bg-gray-800'
+                        className={`rounded-full mb-1.5 transition-colors duration-150 ${
+                          isCurrent ? 'h-2.5 bg-status-urgent' : isDone ? 'h-2 bg-status-normal' : 'h-2 bg-border'
                         }`}
                       ></div>
-                      <span className={`text-[10px] font-bold uppercase ${isCurrent ? 'text-orange-400' : isDone ? 'text-emerald-400' : 'text-gray-600'}`}>
+                      <span className={`text-[10px] font-bold uppercase inline-flex items-center gap-0.5 ${isCurrent ? 'text-status-urgent' : isDone ? 'text-status-normal' : 'text-muted'}`}>
+                        {isDone && <CheckCircle className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
                         {step.label}
+                        <span className="sr-only">{isDone ? ' - done' : isCurrent ? ' - in progress' : ' - not started'}</span>
                       </span>
                     </div>
                   );
@@ -364,7 +377,7 @@ function Help() {
             )}
 
             {/* Map representation */}
-            <div className="h-56 rounded-2xl overflow-hidden border border-gray-800 mb-4 z-10 relative">
+            <div className="h-56 rounded-2xl overflow-hidden border border-border mb-4 z-10 relative">
               {!MAPS_API_KEY ? (
                 <div className="h-full w-full bg-page flex flex-col items-center justify-center gap-1 p-4 text-center">
                   <p className="text-xs text-status-warning font-semibold">Map unavailable</p>
@@ -379,7 +392,7 @@ function Help() {
                 </div>
               ) : (
                 <APIProvider apiKey={MAPS_API_KEY}>
-                  <Map
+                  <GoogleMap
                     mapId={MAPS_MAP_ID}
                     defaultCenter={{ lat: coordinates.lat, lng: coordinates.lng }}
                     defaultZoom={13}
@@ -420,43 +433,44 @@ function Help() {
                         />
                       </>
                     )}
-                  </Map>
+                  </GoogleMap>
                 </APIProvider>
               )}
             </div>
 
             {/* Drone Telemetry details for Citizen info */}
-            <div className="bg-[#1F2937]/50 rounded-2xl p-4 border border-gray-800/80 mb-4">
+            <div className="bg-page rounded-2xl p-4 border border-border mb-4">
               {drone ? (
                 <div>
-                  <div className="flex items-center justify-between mb-3 border-b border-gray-800/50 pb-2">
+                  <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
                     <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-cyan-400 animate-spin" />
-                      <span className="text-xs font-mono text-cyan-400 font-bold">{drone.call_sign} responding</span>
+                      <Shield className="h-4 w-4 text-accent" aria-hidden="true" />
+                      <span className="text-xs font-mono text-accent font-bold">{drone.call_sign} responding</span>
                     </div>
                     {eta && (
-                      <span className="text-xs font-mono bg-cyan-950/40 text-cyan-400 px-2 py-0.5 border border-cyan-500/20 rounded font-semibold">
+                      <span className="text-xs font-mono bg-accent/10 text-accent px-2 py-0.5 border border-accent/30 rounded font-semibold">
                         {eta}
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono text-gray-400">
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono text-muted">
                     <p>On its way to you</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-4 text-center">
-                  <AlertTriangle className="h-5 w-5 text-orange-500 animate-bounce mb-1" />
-                  <p className="text-xs text-gray-400">A responder has been alerted. You&rsquo;ll see it here when it&rsquo;s on the way.</p>
+                  <AlertTriangle className="h-5 w-5 text-status-urgent mb-1" aria-hidden="true" />
+                  <p className="text-xs text-muted">A responder has been alerted. You&rsquo;ll see it here when it&rsquo;s on the way.</p>
                 </div>
               )}
             </div>
 
-            {/* Realtime Video Stream Feed Placeholder */}
+            {/* Live feed. The frame stays black in both themes: it holds a
+                picture, not a surface. */}
             {drone && (drone.status === 'active' || drone.status === 'on_site') && (
-              <div className="bg-black rounded-2xl aspect-video overflow-hidden relative border border-cyan-500/30 mb-4">
-                <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-red-600 text-white px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider animate-pulse">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white"></span>
+              <div className="bg-black rounded-2xl aspect-video overflow-hidden relative border border-accent/30 mb-4">
+                <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-status-critical text-on-solid px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider motion-safe:animate-pulse">
+                  <span className="h-1.5 w-1.5 rounded-full bg-on-solid"></span>
                   LIVE CAMERA FEED
                 </div>
                 {drone.stream_url ? (
@@ -469,9 +483,9 @@ function Help() {
                     className="w-full h-full object-cover opacity-80"
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-950 text-gray-400">
-                    <Activity className="h-8 w-8 text-cyan-500 animate-pulse mb-2" />
-                    <span className="text-[11px] font-mono tracking-widest text-cyan-500 animate-pulse uppercase">Connecting…</span>
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-page text-muted">
+                    <Activity className="h-8 w-8 text-accent mb-2" aria-hidden="true" />
+                    <span className="text-[11px] font-mono tracking-widest text-accent uppercase">Connecting…</span>
                   </div>
                 )}
               </div>
@@ -479,21 +493,20 @@ function Help() {
 
             {/* Event log feed */}
             <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-              <span className="text-[10px] font-mono text-gray-500 block uppercase mb-1">Updates</span>
+              <span className="text-[10px] font-mono text-muted block uppercase mb-1">Updates</span>
               {logs.map((log) => (
-                <div key={log.id} className="flex gap-2 text-[11px] font-mono border-l border-gray-800 pl-3 py-0.5">
-                  <span className="text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                  <span className="text-cyan-400 font-bold uppercase">{log.action.replace(/_/g, ' ')}:</span>
-                  <span className="text-gray-300 flex-1">{log.notes}</span>
+                <div key={log.id} className="flex gap-2 text-[11px] font-mono border-l border-border pl-3 py-0.5">
+                  <span className="text-muted">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                  <span className="text-accent font-bold uppercase">{log.action.replace(/_/g, ' ')}:</span>
+                  <span className="text-text flex-1">{log.notes}</span>
                 </div>
               ))}
               {logs.length === 0 && (
-                <p className="text-[11px] font-mono text-gray-600">Your report has been logged. Updates will appear here.</p>
+                <p className="text-[11px] font-mono text-muted">Your report has been logged. Updates will appear here.</p>
               )}
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

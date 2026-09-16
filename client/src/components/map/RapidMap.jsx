@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+// Aliased: the component is called Map, which would shadow the global Map
+// constructor used by the marker caches below.
+import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { useShallow } from 'zustand/react/shallow';
 import useRapidStore from '../../store/rapidStore';
 import { Polyline, Circle, Polygon, MapCamera } from './gmapPrimitives';
@@ -125,7 +127,7 @@ export default function RapidMap() {
           <MapUnavailable drones={drones} incidents={activeIncidents} bases={bases} />
         ) : (
           <APIProvider apiKey={API_KEY}>
-            <Map
+            <GoogleMap
               mapId={MAP_ID}
               defaultCenter={mapCenter}
               defaultZoom={mapZoom}
@@ -284,7 +286,7 @@ export default function RapidMap() {
                   {info.body}
                 </InfoWindow>
               )}
-            </Map>
+            </GoogleMap>
           </APIProvider>
         )}
       </div>

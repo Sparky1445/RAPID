@@ -22,7 +22,10 @@ export function setTheme(theme) {
   }
   try {
     localStorage.setItem(STORAGE_KEY, theme);
-  } catch (e) {}
+  } catch {
+    // Private browsing and blocked site data both throw here. The theme still
+    // applies for this page load; it just will not be remembered.
+  }
 }
 
 export function toggleTheme() {
