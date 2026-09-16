@@ -1,6 +1,6 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { Shield, Radio, Layers, FileText, BarChart3, HelpCircle, Activity, Radar, LogOut, BrainCircuit, ShieldCheck } from 'lucide-react';
+import { Shield, Radio, Layers, FileText, BarChart3, HelpCircle, Activity, Radar, LogOut, BrainCircuit, ShieldCheck, Menu, X } from 'lucide-react';
 import Login from './pages/Login';
 import useRapidStore from './store/rapidStore';
 
@@ -31,7 +31,7 @@ const ROLE_LABELS = {
   AIRSPACE_AUTHORITY: 'Airspace Authority'
 };
 
-function Sidebar() {
+function Sidebar({ open, onNavigate }) {
   const location = useLocation();
   const currentUser = useRapidStore(s => s.currentUser);
   const logout = useRapidStore(s => s.logout);
@@ -48,7 +48,12 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-surface border-r border-border flex flex-col justify-between h-screen fixed left-0 top-0 z-40">
+    <aside
+      id="primary-nav"
+      className={`w-64 bg-surface border-r border-border flex flex-col justify-between h-screen fixed left-0 top-0 z-40 transition-transform duration-150 lg:translate-x-0 ${
+        open ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
       <div>
         {/* Brand Header */}
         <div className="p-6 border-b border-border flex items-center gap-3">
@@ -70,6 +75,7 @@ function Sidebar() {
               <Link
                 key={link.to}
                 to={link.to}
+                onClick={onNavigate}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium ${
                   isActive
                     ? 'bg-accent/10 text-accent border border-accent/20'
@@ -97,9 +103,9 @@ function Sidebar() {
             <button
               onClick={logout}
               title="Log out"
-              className="p-1.5 rounded-lg text-muted hover:text-status-critical hover:bg-status-critical/10 transition-colors flex-shrink-0"
+              className="h-11 w-11 flex items-center justify-center rounded-lg text-muted hover:text-status-critical hover:bg-status-critical/10 transition-colors flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -119,11 +125,43 @@ function Sidebar() {
   );
 }
 
+// Below lg the sidebar is a drawer rather than a fixed rail. It was a fixed
+// w-64 with a matching ml-64 on main, which pushed every console screen
+// 256px off a phone-width viewport.
 function MainLayout({ children }) {
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!navOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setNavOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
+
   return (
     <div className="flex min-h-screen bg-page">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-8 min-h-screen text-text">
+      <button
+        type="button"
+        onClick={() => setNavOpen(v => !v)}
+        aria-expanded={navOpen}
+        aria-controls="primary-nav"
+        className="lg:hidden fixed top-3 left-3 z-50 h-11 w-11 flex items-center justify-center rounded-lg bg-surface border border-border-strong text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        {navOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+        <span className="sr-only">{navOpen ? 'Close navigation' : 'Open navigation'}</span>
+      </button>
+
+      {navOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-text/50 z-30"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
+
+      <main className="flex-1 min-w-0 lg:ml-64 px-4 pt-16 pb-8 lg:px-8 lg:pt-8 min-h-screen text-text">
         {children}
       </main>
     </div>
