@@ -8,17 +8,22 @@ import { SkeletonRow } from '../components/shared/Skeleton';
 // directly still gets a real 403, logged as its own unauthorized_attempt).
 const AUDIT_READ_ROLES = ['NATIONAL_COMMANDER', 'STATE_COMMANDER'];
 
-const ACTION_STYLE = {
-  login_success: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-  login_failure: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
-  login_rate_limited: 'text-red-400 border-red-500/30 bg-red-500/10',
-  logout: 'text-gray-400 border-gray-600/30 bg-gray-500/10',
-  zone_created: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10',
-  zone_updated: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10',
-  zone_deleted: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
-  rl_mode_changed: 'text-purple-400 border-purple-500/30 bg-purple-500/10',
-  unauthorized_attempt: 'text-red-400 border-red-500/30 bg-red-500/10'
+// The two events an auditor is actually hunting for -- a rate-limited login
+// and a refused request -- are the two filled badges, so they stand out of a
+// long list by weight and not only by hue.
+const ACTION_BADGE = {
+  login_success: 'status-badge--normal status-badge--outline',
+  login_failure: 'status-badge--warning status-badge--outline',
+  login_rate_limited: 'status-badge--critical status-badge--filled',
+  logout: 'border-border text-muted',
+  zone_created: 'border-border-strong text-text',
+  zone_updated: 'border-border-strong text-text',
+  zone_deleted: 'status-badge--warning status-badge--outline',
+  rl_mode_changed: 'status-badge--urgent status-badge--outline',
+  unauthorized_attempt: 'status-badge--critical status-badge--filled'
 };
+
+const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
 function describe(entry) {
   const who = entry.actor?.username || 'unknown';
@@ -92,11 +97,11 @@ function SecurityAudit() {
   if (!allowed) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <Lock className="h-10 w-10 text-gray-600 mb-4" />
-        <h2 className="text-lg font-bold text-white">Commander Access Required</h2>
-        <p className="text-xs text-gray-500 font-mono mt-2 max-w-md">
-          The security audit log carries cross-agency sensitive detail (usernames, IP addresses, unauthorized attempts).
-          Signed in as {currentUser?.role || '—'} — this page is visible to NATIONAL_COMMANDER and STATE_COMMANDER accounts only.
+        <Lock className="h-10 w-10 text-muted mb-4" aria-hidden="true" />
+        <h2 className="text-lg font-bold text-text">You need a commander account</h2>
+        <p className="text-xs text-muted font-mono mt-2 max-w-md leading-relaxed">
+          This log holds usernames, IP addresses and refused requests, so only NATIONAL_COMMANDER and STATE_COMMANDER accounts can open it.
+          You are signed in as {currentUser?.role || '—'}.
         </p>
       </div>
     );
@@ -104,32 +109,34 @@ function SecurityAudit() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-[#1F2E45] pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/20">
-            <ShieldCheck className="h-6 w-6 text-cyan-400" />
+          <div className="bg-accent/10 p-2.5 rounded-xl border border-accent/30">
+            <ShieldCheck className="h-6 w-6 text-accent" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-wide text-white">Security Audit Log</h2>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">Hash-chained record of logins, airspace zone writes, RL mode switches, and unauthorized attempts.</p>
+            <h2 className="text-xl font-bold tracking-wide text-text">Security log</h2>
+            <p className="text-xs text-muted font-mono mt-0.5">Every sign-in, zone change, mode switch and refused request, each one hashed to the one before it.</p>
           </div>
         </div>
         <button
           onClick={verifyChain}
           disabled={verifying}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider disabled:opacity-50"
+          className={`flex items-center gap-2 min-h-[44px] px-4 bg-accent text-on-solid rounded-xl text-[10px] font-bold uppercase tracking-wider transition-opacity duration-150 hover:opacity-90 disabled:opacity-50 ${FOCUS}`}
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${verifying ? 'animate-spin' : ''}`} />
-          Verify Chain
+          <RefreshCw className={`h-3.5 w-3.5 ${verifying ? 'animate-spin' : ''}`} aria-hidden="true" />
+          {verifying ? 'Checking…' : 'Check for tampering'}
         </button>
       </div>
 
       {chainStatus && (
-        <div className={`p-3 rounded-xl text-xs font-mono font-bold flex items-center gap-2 ${
-          chainStatus.valid ? 'bg-emerald-900/30 border border-emerald-500/30 text-emerald-400' : 'bg-red-900/30 border border-red-500/30 text-red-400'
+        <div role="status" className={`p-3 rounded-xl text-xs font-mono font-bold flex items-center gap-2 border ${
+          chainStatus.valid ? 'bg-status-normal/10 border-status-normal/40 text-status-normal' : 'bg-status-critical/10 border-status-critical/40 text-status-critical'
         }`}>
-          {chainStatus.valid ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
-          {chainStatus.valid ? 'Chain verified — no tampering detected.' : `Chain broken at entry ${chainStatus.brokenAt}: ${chainStatus.reason}`}
+          {chainStatus.valid
+            ? <ShieldCheck className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            : <ShieldAlert className="h-4 w-4 flex-shrink-0" aria-hidden="true" />}
+          {chainStatus.valid ? 'Checked — nothing has been altered.' : `Broken at entry ${chainStatus.brokenAt}: ${chainStatus.reason}`}
         </div>
       )}
 
@@ -138,17 +145,17 @@ function SecurityAudit() {
           {loading ? (
             [0, 1, 2, 3].map(i => <SkeletonRow key={i} />)
           ) : entries.map(e => (
-            <div key={e.id} className="p-3 rounded-xl border border-slate-800 bg-slate-900/30 flex items-center justify-between gap-4">
+            <div key={e.id} className="p-3 rounded-xl border border-border bg-page flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-xs font-semibold text-white truncate">{describe(e)}</div>
-                <div className="text-[9px] text-gray-500 font-mono">{new Date(e.timestamp).toLocaleString()}</div>
+                <div className="text-xs font-semibold text-text truncate">{describe(e)}</div>
+                <div className="text-[10px] text-muted font-mono">{new Date(e.timestamp).toLocaleString()}</div>
               </div>
-              <span className={`flex-shrink-0 text-[9px] font-mono font-bold uppercase px-2 py-1 rounded-full border ${ACTION_STYLE[e.action] || 'text-gray-400 border-gray-600/30 bg-gray-500/10'}`}>
+              <span className={`status-badge flex-shrink-0 font-mono uppercase ${ACTION_BADGE[e.action] || 'border-border text-muted'}`}>
                 {e.action.replace(/_/g, ' ')}
               </span>
             </div>
           ))}
-          {!loading && entries.length === 0 && <p className="text-xs text-gray-600 font-mono text-center py-4">No security events logged yet.</p>}
+          {!loading && entries.length === 0 && <p className="text-xs text-muted font-mono text-center py-4">Nothing logged yet.</p>}
         </div>
       </div>
     </div>
